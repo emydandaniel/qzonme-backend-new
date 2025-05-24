@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "rm -rf dist && tsc && cp -r server/public dist/",
+    "build": "rm -rf dist && tsc && mkdir -p dist/server/public && cp -r server/public/* dist/server/public/ 2>/dev/null || true",
     "start": "node dist/server/index.js",
     "db:push": "drizzle-kit push"
   },

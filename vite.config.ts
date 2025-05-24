@@ -24,6 +24,7 @@ export default defineConfig({
     hmr: false,
     watch: {
       usePolling: true,
-    }
+    },
+    allowedHosts: true
   }
 }); 

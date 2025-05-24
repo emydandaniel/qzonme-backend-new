@@ -119,4 +119,12 @@ export const InsertQuizAttemptSchema = QuizAttemptSchema.omit({
   createdAt: true
 });
 
-export type InsertQuizAttempt = z.infer<typeof InsertQuizAttemptSchema>; 
+export type InsertQuizAttempt = z.infer<typeof InsertQuizAttemptSchema>;
+
+// Additional schemas for API
+export const QuestionAnswerSchema = z.object({
+  questionId: z.string(),
+  answer: z.number()
+});
+
+export type QuestionAnswer = z.infer<typeof QuestionAnswerSchema>; 

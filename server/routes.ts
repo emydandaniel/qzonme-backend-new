@@ -169,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Find a case-insensitive match
         const slugMatch = allQuizzesList.find(q => 
-          q.urlSlug.toLowerCase() === urlSlug.toLowerCase()
+          q.urlSlug?.toLowerCase() === urlSlug.toLowerCase()
         );
         
         if (slugMatch) {
@@ -232,12 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get quiz by ID
   app.get("/api/quizzes/:quizId", async (req, res) => {
     try {
-      const quizId = parseInt(req.params.quizId);
-      
-      if (isNaN(quizId)) {
-        return res.status(400).json({ message: "Invalid quiz ID" });
-      }
-      
+      const quizId = req.params.quizId;
       const quiz = await storage.getQuiz(quizId);
       
       if (!quiz) {
@@ -254,10 +249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      console.log(`GET /api/quizzes/${quizId} response:`, quiz);
       res.json(quiz);
     } catch (error) {
-      console.error(`Error fetching quiz ${req.params.quizId}:`, error);
       res.status(500).json({ message: "Failed to fetch quiz" });
     }
   });
@@ -531,6 +524,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register contact form routes
   registerContactRoutes(app);
+
+  app.post("/api/quizzes/:quizId/submit", async (req, res) => {
+    try {
+      const quizId = req.params.quizId;
+      const answers = z.array(questionAnswerSchema).parse(req.body);
+      
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ message: "Quiz not found" });
+      }
+      
+      const questions = await storage.getQuestions(quizId);
+      let score = 0;
+      
+      for (const answer of answers) {
+        const question = questions.find(q => q.id === answer.questionId);
+        if (question && question.correctAnswer === answer.answer) {
+          score++;
+        }
+      }
+      
+      const attempt = await storage.createQuizAttempt({
+        quizId,
+        score
+      });
+      
+      res.json({
+        score,
+        totalQuestions: questions.length,
+        attempt
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid answer data", error: (error as z.ZodError).message });
+      } else {
+        res.status(500).json({ message: "Failed to submit quiz" });
+      }
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

@@ -5,27 +5,29 @@ import {
   quizAttempts, type QuizAttempt, type InsertQuizAttempt
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 // Storage interface
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   
   // Quiz operations
-  getQuiz(id: number): Promise<Quiz | undefined>;
+  getQuiz(id: string): Promise<Quiz | undefined>;
   getQuizByAccessCode(accessCode: string): Promise<Quiz | undefined>;
   getQuizByUrlSlug(urlSlug: string): Promise<Quiz | undefined>;
   getQuizByDashboardToken(token: string): Promise<Quiz | undefined>;
   createQuiz(quiz: InsertQuiz): Promise<Quiz>;
   
   // Question operations
-  getQuestionsByQuizId(quizId: number): Promise<Question[]>;
+  getQuestions(quizId: string): Promise<Question[]>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   
   // Quiz Attempt operations
-  getQuizAttempts(quizId: number): Promise<QuizAttempt[]>;
+  getQuizAttempts(quizId: string): Promise<QuizAttempt[]>;
   createQuizAttempt(attempt: InsertQuizAttempt): Promise<QuizAttempt>;
   
   // Quiz expiration check
@@ -40,110 +42,73 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  async createUser(insertUser: InsertUser): Promise<User> {
-    // Validate the username is not empty
-    if (!insertUser.username || !insertUser.username.trim()) {
-      throw new Error("Username is required");
-    }
-    
-    const [user] = await db.insert(users).values(insertUser).returning();
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values({
+      id: nanoid(),
+      ...userData
+    }).returning();
+    return user;
+  }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
   
   // Quiz methods
-  async getQuiz(id: number): Promise<Quiz | undefined> {
+  async getQuiz(id: string): Promise<Quiz | undefined> {
     const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
     return quiz;
   }
   
   async getQuizByAccessCode(accessCode: string): Promise<Quiz | undefined> {
-    const [quiz] = await db
-      .select()
-      .from(quizzes)
-      .where(eq(quizzes.accessCode, accessCode));
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.accessCode, accessCode));
     return quiz;
   }
   
   async getQuizByUrlSlug(urlSlug: string): Promise<Quiz | undefined> {
-    const [quiz] = await db
-      .select()
-      .from(quizzes)
-      .where(eq(quizzes.urlSlug, urlSlug));
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.urlSlug, urlSlug));
     return quiz;
   }
   
   async getQuizByDashboardToken(token: string): Promise<Quiz | undefined> {
-    const [quiz] = await db
-      .select()
-      .from(quizzes)
-      .where(eq(quizzes.dashboardToken, token));
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.dashboardToken, token));
     return quiz;
   }
   
-  async createQuiz(insertQuiz: InsertQuiz): Promise<Quiz> {
-    // Validate required fields
-    if (!insertQuiz.creatorName || !insertQuiz.creatorName.trim()) {
-      console.error("Empty creator name received");
-      throw new Error("Creator name is required");
-    }
-    
-    if (!insertQuiz.accessCode || !insertQuiz.urlSlug || !insertQuiz.dashboardToken) {
-      console.error("Required quiz fields missing", { 
-        hasAccessCode: !!insertQuiz.accessCode, 
-        hasUrlSlug: !!insertQuiz.urlSlug,
-        hasDashboardToken: !!insertQuiz.dashboardToken
-      });
-      throw new Error("Required quiz fields are missing");
-    }
-    
-    console.log(`Creating quiz with creator: "${insertQuiz.creatorName}", slug: "${insertQuiz.urlSlug}"`);
-    
-    // Create the quiz
-    const [quiz] = await db
-      .insert(quizzes)
-      .values(insertQuiz)
-      .returning();
-    
+  async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
+    const [quiz] = await db.insert(quizzes).values({
+      id: nanoid(),
+      ...quizData
+    }).returning();
     return quiz;
   }
   
   // Question methods
-  async getQuestionsByQuizId(quizId: number): Promise<Question[]> {
-    const result = await db
-      .select()
-      .from(questions)
-      .where(eq(questions.quizId, quizId))
-      .orderBy(questions.order);
-    
+  async getQuestions(quizId: string): Promise<Question[]> {
+    const result = await db.select().from(questions).where(eq(questions.quizId, quizId));
     return result;
   }
   
-  async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
-    const [question] = await db
-      .insert(questions)
-      .values(insertQuestion)
-      .returning();
-    
+  async createQuestion(questionData: InsertQuestion): Promise<Question> {
+    const [question] = await db.insert(questions).values({
+      id: nanoid(),
+      ...questionData
+    }).returning();
     return question;
   }
   
   // Quiz Attempt methods
-  async getQuizAttempts(quizId: number): Promise<QuizAttempt[]> {
-    const result = await db
-      .select()
-      .from(quizAttempts)
-      .where(eq(quizAttempts.quizId, quizId))
-      .orderBy(quizAttempts.score);
-    
+  async getQuizAttempts(quizId: string): Promise<QuizAttempt[]> {
+    const result = await db.select().from(quizAttempts).where(eq(quizAttempts.quizId, quizId));
     return result.reverse(); // Reverse to get highest scores first
   }
   
-  async createQuizAttempt(insertAttempt: InsertQuizAttempt): Promise<QuizAttempt> {
-    const [attempt] = await db
-      .insert(quizAttempts)
-      .values(insertAttempt)
-      .returning();
-    
+  async createQuizAttempt(attemptData: InsertQuizAttempt): Promise<QuizAttempt> {
+    const [attempt] = await db.insert(quizAttempts).values({
+      id: nanoid(),
+      ...attemptData
+    }).returning();
     return attempt;
   }
   

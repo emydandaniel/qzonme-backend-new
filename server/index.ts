@@ -12,10 +12,11 @@ app.use(express.urlencoded({ extended: false }));
 
 // Special route for sitemap.xml - ensure it's served with XML content type
 app.get('/sitemap.xml', (req, res) => {
-  const sitemapPath = pathModule.join(process.cwd(), 'public', 'sitemap.xml');
+  const sitemapPath = pathModule.join(process.cwd(), 'dist', 'public', 'sitemap.xml');
   fs.readFile(sitemapPath, (err, data) => {
     if (err) {
-      res.status(500).send('Error reading sitemap file');
+      console.warn('Warning: Could not find sitemap.xml');
+      res.status(404).send('Sitemap not found');
       return;
     }
     res.header('Content-Type', 'application/xml');

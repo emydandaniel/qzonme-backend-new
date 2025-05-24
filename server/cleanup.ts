@@ -49,7 +49,7 @@ export async function cleanupExpiredQuizzes() {
     // Clean up related images from Cloudinary
     try {
       console.log(`Cleaning up images for ${expiredQuizIds.length} expired quizzes...`);
-      await cleanupOldQuizImages(expiredQuizIds);
+      await cleanupOldQuizImages(expiredQuizIds.map(id => parseInt(id)));
     } catch (imageError) {
       console.error('Error cleaning up images:', imageError);
       // Continue with database cleanup even if image cleanup fails

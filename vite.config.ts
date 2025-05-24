@@ -19,4 +19,11 @@ export default defineConfig({
       '@shared': resolve(__dirname, 'shared'),
     },
   },
+  server: {
+    middlewareMode: true,
+    hmr: false,
+    watch: {
+      usePolling: true,
+    }
+  }
 }); 

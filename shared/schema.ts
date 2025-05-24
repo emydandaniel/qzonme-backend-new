@@ -14,9 +14,9 @@ export const quizzes = pgTable('quizzes', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   description: text('description').notNull(),
-  accessCode: text('access_code').unique(),
-  urlSlug: text('url_slug').unique(),
-  dashboardToken: text('dashboard_token').unique(),
+  accessCode: text('access_code'),
+  urlSlug: text('url_slug'),
+  dashboardToken: text('dashboard_token'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
@@ -61,15 +61,15 @@ export const QuizSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  accessCode: z.string().optional(),
-  urlSlug: z.string().optional(),
-  dashboardToken: z.string().optional(),
+  accessCode: z.string().nullable(),
+  urlSlug: z.string().nullable(),
+  dashboardToken: z.string().nullable(),
   questions: z.array(z.object({
     id: z.string(),
     question: z.string(),
     options: z.array(z.string()),
     correctAnswer: z.number(),
-    explanation: z.string().optional(),
+    explanation: z.string().nullable(),
     order: z.number()
   })),
   createdAt: z.date(),
@@ -81,7 +81,8 @@ export type Quiz = z.infer<typeof QuizSchema>;
 export const InsertQuizSchema = QuizSchema.omit({ 
   id: true, 
   createdAt: true, 
-  updatedAt: true 
+  updatedAt: true,
+  questions: true
 });
 
 export type InsertQuiz = z.infer<typeof InsertQuizSchema>;
@@ -92,7 +93,7 @@ export const QuestionSchema = z.object({
   question: z.string(),
   options: z.array(z.string()),
   correctAnswer: z.number(),
-  explanation: z.string().optional(),
+  explanation: z.string().nullable(),
   order: z.number()
 });
 

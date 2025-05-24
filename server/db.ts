@@ -1,7 +1,7 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import ws from "ws";
-import { quizzes, questions, quizAttempts } from '../shared/schema';
+import { quizzes, questions, quizAttempts } from '../shared/schema.js';
 
 neonConfig.webSocketConstructor = ws;
 

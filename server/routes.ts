@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { db } from "./db";
+import { storage } from "./storage.js";
+import { db } from "./db.js";
 import { 
   insertUserSchema, 
   insertQuizSchema, 
@@ -11,13 +11,13 @@ import {
   quizzes,
   quizAttempts,
   questions
-} from "@shared/schema";
+} from "@shared/schema.js";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
-import { registerContactRoutes } from "./routes/contact";
+import { registerContactRoutes } from "./routes/contact.js";
 import { nanoid } from "nanoid";
 
 // Setup dirname equivalent in ES modules

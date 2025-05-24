@@ -1,7 +1,7 @@
-import { db } from './db';
-import { quizzes, questions, quizAttempts } from '../shared/schema';
+import { db } from './db.js';
+import { quizzes, questions, quizAttempts } from '../shared/schema.js';
 import { eq, lt, inArray, sql } from 'drizzle-orm';
-import { cleanupOldQuizImages } from './cloudinary';
+import { cleanupOldQuizImages } from './cloudinary.js';
 
 /**
  * Gets the cutoff date for quiz retention

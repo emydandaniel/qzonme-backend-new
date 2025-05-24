@@ -24,6 +24,7 @@ export default defineConfig({
     hmr: false,
     watch: {
       usePolling: true
-    }
+    },
+    allowedHosts: ['localhost', '127.0.0.1', 'render.com']
   }
 }); 

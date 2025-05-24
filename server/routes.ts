@@ -11,7 +11,7 @@ import {
   quizzes,
   quizAttempts,
   questions
-} from "@shared/schema.js";
+} from "../shared/schema.js";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";

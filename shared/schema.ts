@@ -1,5 +1,6 @@
-import { z } from "zod";
-import { pgTable, text, timestamp, integer, uuid, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, json } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
 // Database Schema
 export const users = pgTable('users', {
@@ -25,10 +26,10 @@ export const questions = pgTable('questions', {
   id: text('id').primaryKey(),
   quizId: text('quiz_id').notNull().references(() => quizzes.id),
   question: text('question').notNull(),
-  options: text('options').array().notNull(),
+  options: json('options').$type<string[]>().notNull(),
   correctAnswer: integer('correct_answer').notNull(),
   explanation: text('explanation'),
-  order: integer('order').notNull().default(0)
+  order: integer('order').notNull()
 });
 
 export const quizAttempts = pgTable('quiz_attempts', {
@@ -38,93 +39,33 @@ export const quizAttempts = pgTable('quiz_attempts', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
-// Zod Schemas for Validation
-export const UserSchema = z.object({
-  id: z.string(),
-  email: z.string().email(),
-  name: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date()
-});
+// Zod Schemas
+export const UserSchema = createSelectSchema(users);
+export const QuizSchema = createSelectSchema(quizzes);
+export const QuestionSchema = createSelectSchema(questions);
+export const QuizAttemptSchema = createSelectSchema(quizAttempts);
 
-export type User = z.infer<typeof UserSchema>;
+// Insert Schemas
+export const insertUserSchema = createInsertSchema(users);
+export const insertQuizSchema = createInsertSchema(quizzes);
+export const insertQuestionSchema = createInsertSchema(questions);
+export const insertQuizAttemptSchema = createInsertSchema(quizAttempts);
 
-export const InsertUserSchema = UserSchema.omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
-});
-
-export type InsertUser = z.infer<typeof InsertUserSchema>;
-
-export const QuizSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  accessCode: z.string().nullable(),
-  urlSlug: z.string().nullable(),
-  dashboardToken: z.string().nullable(),
-  questions: z.array(z.object({
-    id: z.string(),
-    question: z.string(),
-    options: z.array(z.string()),
-    correctAnswer: z.number(),
-    explanation: z.string().nullable(),
-    order: z.number()
-  })),
-  createdAt: z.date(),
-  updatedAt: z.date()
-});
-
-export type Quiz = z.infer<typeof QuizSchema>;
-
-export const InsertQuizSchema = QuizSchema.omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true,
-  questions: true
-});
-
-export type InsertQuiz = z.infer<typeof InsertQuizSchema>;
-
-export const QuestionSchema = z.object({
-  id: z.string(),
-  quizId: z.string(),
-  question: z.string(),
-  options: z.array(z.string()),
-  correctAnswer: z.number(),
-  explanation: z.string().nullable(),
-  order: z.number()
-});
-
-export type Question = z.infer<typeof QuestionSchema>;
-
-export const InsertQuestionSchema = QuestionSchema.omit({ 
-  id: true 
-});
-
-export type InsertQuestion = z.infer<typeof InsertQuestionSchema>;
-
-export const QuizAttemptSchema = z.object({
-  id: z.string(),
-  quizId: z.string(),
-  score: z.number(),
-  createdAt: z.date()
-});
-
-export type QuizAttempt = z.infer<typeof QuizAttemptSchema>;
-
-export const InsertQuizAttemptSchema = QuizAttemptSchema.omit({ 
-  id: true,
-  createdAt: true
-});
-
-export type InsertQuizAttempt = z.infer<typeof InsertQuizAttemptSchema>;
-
-// Additional schemas for API
-export const QuestionAnswerSchema = z.object({
+// Additional Schemas
+export const questionAnswerSchema = z.object({
   questionId: z.string(),
   answer: z.number()
 });
 
-export type QuestionAnswer = z.infer<typeof QuestionAnswerSchema>; 
+// Types
+export type User = z.infer<typeof UserSchema>;
+export type Quiz = z.infer<typeof QuizSchema>;
+export type Question = z.infer<typeof QuestionSchema>;
+export type QuizAttempt = z.infer<typeof QuizAttemptSchema>;
+export type QuestionAnswer = z.infer<typeof questionAnswerSchema>;
+
+// Insert Types
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertQuiz = z.infer<typeof insertQuizSchema>;
+export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
+export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>; 

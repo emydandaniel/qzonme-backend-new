@@ -7,24 +7,23 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'server/index.ts'),
+        main: resolve(__dirname, 'server/index.ts')
       },
       output: {
-        format: 'es',
-      },
-    },
+        format: 'es'
+      }
+    }
   },
   resolve: {
     alias: {
-      '@shared': resolve(__dirname, 'shared'),
-    },
+      '@shared': resolve(__dirname, 'shared')
+    }
   },
   server: {
     middlewareMode: true,
     hmr: false,
     watch: {
-      usePolling: true,
-    },
-    allowedHosts: true
+      usePolling: true
+    }
   }
 }); 

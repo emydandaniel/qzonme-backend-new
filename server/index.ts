@@ -1,10 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { registerRoutes } from "./routes.js";
+import { setupVite, serveStatic, log } from "./vite.js";
 import * as pathModule from "path";
 import * as fs from "fs";
-import { scheduleCleanupTask } from './cleanup';
-import { testCloudinaryConnection } from './cloudinary';
+import { scheduleCleanupTask } from './cleanup.js';
+import { testCloudinaryConnection } from './cloudinary.js';
 
 const app = express();
 app.use(express.json());

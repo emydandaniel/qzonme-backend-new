@@ -18,6 +18,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
 import { registerContactRoutes } from "./routes/contact";
+import { nanoid } from "nanoid";
 
 // Setup dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -86,26 +87,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/quizzes", async (req, res) => {
     try {
       const quizData = insertQuizSchema.parse(req.body);
-      
-      // Additional server-side validation for creator name to prevent the bug
-      if (!quizData.creatorName || quizData.creatorName.trim() === '') {
-        return res.status(400).json({ 
-          message: "Creator name cannot be empty",
-          error: "EMPTY_CREATOR_NAME" 
-        });
-      }
-      
-      // Extra validation to catch any instance of the known default value
-      if (quizData.creatorName.toLowerCase() === 'emydan') {
-        console.error("CRITICAL BUG DETECTED: Default name 'emydan' was submitted");
-        return res.status(400).json({ 
-          message: "Cannot use default creator name. Please enter your own name.",
-          error: "DEFAULT_CREATOR_NAME_USED"
-        });
-      }
-      
-      console.log(`Creating quiz with creator name: "${quizData.creatorName}"`);
-      
       const quiz = await storage.createQuiz(quizData);
       res.status(201).json(quiz);
     } catch (error) {
@@ -272,13 +253,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/quizzes/:quizId/questions", async (req, res) => {
     try {
-      const quizId = parseInt(req.params.quizId);
-      
-      if (isNaN(quizId)) {
-        return res.status(400).json({ message: "Invalid quiz ID" });
-      }
-      
-      const questions = await storage.getQuestionsByQuizId(quizId);
+      const quizId = req.params.quizId;
+      const questions = await storage.getQuestions(quizId);
       res.json(questions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch questions" });
@@ -302,30 +278,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/quizzes/:quizId/attempts", async (req, res) => {
     try {
-      // Add aggressive anti-caching headers
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
-      const quizId = parseInt(req.params.quizId);
-      const timestamp = Date.now(); // For debugging
+      const quizId = req.params.quizId;
+      const timestamp = Date.now();
       
       console.log(`[${timestamp}] Fetching attempts for quiz ${quizId}`);
       
-      if (isNaN(quizId)) {
-        return res.status(400).json({ message: "Invalid quiz ID" });
-      }
-      
-      // Add a small delay to ensure previous writes have been committed
       await new Promise(resolve => setTimeout(resolve, 100));
       
       const attempts = await storage.getQuizAttempts(quizId);
       
       console.log(`[${timestamp}] Returning ${attempts.length} attempts for quiz ${quizId}`);
       
-      // Add a server timestamp in the response to help client detect freshness
-      // Sort attempts by completion date (newest first) for immediate display
-      attempts.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+      attempts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       console.log(`[${timestamp}] Sending sorted attempts: ${attempts.map(a => a.id).join(', ')}`);
       
@@ -343,32 +311,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get specific quiz attempt by ID
   app.get("/api/quiz-attempts/:attemptId", async (req, res) => {
     try {
-      // Add anti-caching headers
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
-      const attemptId = parseInt(req.params.attemptId);
-      const timestamp = Date.now(); // For tracing and debugging
-      
-      if (isNaN(attemptId)) {
-        return res.status(400).json({ message: "Invalid attempt ID" });
-      }
+      const attemptId = req.params.attemptId;
+      const timestamp = Date.now();
       
       console.log(`[${timestamp}] Fetching attempt with ID ${attemptId}`);
       
-      // Get all attempt IDs from all quizzes
-      // This is a temporary workaround since we don't have a direct getAttemptById method
       const allQuizzesList = await db.select().from(quizzes);
       const allAttempts = [];
       
-      // Gather all attempts for all quizzes
       for (const quiz of allQuizzesList) {
         const quizAttempts = await storage.getQuizAttempts(quiz.id);
         allAttempts.push(...quizAttempts);
       }
       
-      // Find the specific attempt
       const attempt = allAttempts.find(a => a.id === attemptId);
       
       if (!attempt) {
@@ -378,7 +337,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[${timestamp}] Found attempt ${attemptId} (quiz ${attempt.quizId})`);
       
-      // Send with timestamp for caching verification
       res.json({
         data: attempt,
         serverTime: timestamp
@@ -392,20 +350,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify an answer
   app.post("/api/questions/:questionId/verify", async (req, res) => {
     try {
-      const questionId = parseInt(req.params.questionId);
-      
-      if (isNaN(questionId)) {
-        return res.status(400).json({ message: "Invalid question ID" });
-      }
+      const questionId = req.params.questionId;
       
       const answerData = z.object({
         answer: z.union([z.string(), z.array(z.string())])
       }).parse(req.body);
       
-      // Get all questions from the database
       const allQuestions = await db.select().from(questions);
-      
-      // Find the specific question
       const question = allQuestions.find(q => q.id === questionId);
       
       if (!question) {
@@ -414,38 +365,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       let isCorrect = false;
-      const correctAnswers = question.correctAnswers as string[];
+      const correctAnswer = question.correctAnswer;
       const userAnswer = answerData.answer;
       
-      // Debug logs to trace the issue
       console.log(`Verifying answer for question ${questionId}:`);
-      console.log(`- Correct answers:`, correctAnswers);
+      console.log(`- Correct answer:`, correctAnswer);
       console.log(`- User answer:`, userAnswer);
       
       if (Array.isArray(userAnswer)) {
-        // For multiple answers, check if all are correct
-        isCorrect = userAnswer.every(ans => 
-          correctAnswers.some(correct => 
-            correct.toLowerCase().trim() === ans.toLowerCase().trim()
-          )
-        );
+        isCorrect = userAnswer.includes(correctAnswer.toString());
       } else {
-        // For single answer, check if it matches any correct answer
-        // Use trim() to fix whitespace issues and ensure exact matching
-        const normalizedUserAnswer = userAnswer.toString().toLowerCase().trim();
-        isCorrect = correctAnswers.some(correct => 
-          correct.toLowerCase().trim() === normalizedUserAnswer
-        );
+        isCorrect = userAnswer.toString() === correctAnswer.toString();
       }
       
       console.log(`Answer is ${isCorrect ? 'CORRECT' : 'INCORRECT'}`);
       
-      // Return both the correctness and the expected answers for debugging
       res.json({ 
         isCorrect,
         debug: {
-          questionText: question.text,
-          correctAnswers: correctAnswers,
+          questionText: question.question,
+          correctAnswer: correctAnswer,
           userAnswer: userAnswer
         }
       });
@@ -540,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const answer of answers) {
         const question = questions.find(q => q.id === answer.questionId);
-        if (question && question.correctAnswer === answer.answer) {
+        if (question && question.correctAnswer.toString() === answer.answer.toString()) {
           score++;
         }
       }

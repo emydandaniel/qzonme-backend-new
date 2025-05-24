@@ -11,8 +11,8 @@ import { nanoid } from "nanoid";
 // Storage interface
 export interface IStorage {
   // User operations
-  getUser(id: number): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUser(id: string): Promise<User | undefined>;
+  createUser(user: Omit<InsertUser, 'id'>): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   
   // Quiz operations
@@ -20,15 +20,15 @@ export interface IStorage {
   getQuizByAccessCode(accessCode: string): Promise<Quiz | undefined>;
   getQuizByUrlSlug(urlSlug: string): Promise<Quiz | undefined>;
   getQuizByDashboardToken(token: string): Promise<Quiz | undefined>;
-  createQuiz(quiz: InsertQuiz): Promise<Quiz>;
+  createQuiz(quiz: Omit<InsertQuiz, 'id'>): Promise<Quiz>;
   
   // Question operations
   getQuestions(quizId: string): Promise<Question[]>;
-  createQuestion(question: InsertQuestion): Promise<Question>;
+  createQuestion(question: Omit<InsertQuestion, 'id'>): Promise<Question>;
   
   // Quiz Attempt operations
   getQuizAttempts(quizId: string): Promise<QuizAttempt[]>;
-  createQuizAttempt(attempt: InsertQuizAttempt): Promise<QuizAttempt>;
+  createQuizAttempt(attempt: Omit<InsertQuizAttempt, 'id'>): Promise<QuizAttempt>;
   
   // Quiz expiration check
   isQuizExpired(quiz: Quiz): boolean;
@@ -37,15 +37,16 @@ export interface IStorage {
 // Database storage implementation using Drizzle ORM
 export class DatabaseStorage implements IStorage {
   // User methods
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
   
-  async createUser(userData: InsertUser): Promise<User> {
+  async createUser(userData: Omit<InsertUser, 'id'>): Promise<User> {
+    const id = nanoid();
     const [user] = await db.insert(users).values({
-      id: nanoid(),
-      ...userData
+      ...userData,
+      id
     }).returning();
     return user;
   }
@@ -76,10 +77,11 @@ export class DatabaseStorage implements IStorage {
     return quiz;
   }
   
-  async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
+  async createQuiz(quizData: Omit<InsertQuiz, 'id'>): Promise<Quiz> {
+    const id = nanoid();
     const [quiz] = await db.insert(quizzes).values({
-      id: nanoid(),
-      ...quizData
+      ...quizData,
+      id
     }).returning();
     return quiz;
   }
@@ -90,10 +92,11 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
   
-  async createQuestion(questionData: InsertQuestion): Promise<Question> {
+  async createQuestion(questionData: Omit<InsertQuestion, 'id'>): Promise<Question> {
+    const id = nanoid();
     const [question] = await db.insert(questions).values({
-      id: nanoid(),
-      ...questionData
+      ...questionData,
+      id
     }).returning();
     return question;
   }
@@ -104,10 +107,11 @@ export class DatabaseStorage implements IStorage {
     return result.reverse(); // Reverse to get highest scores first
   }
   
-  async createQuizAttempt(attemptData: InsertQuizAttempt): Promise<QuizAttempt> {
+  async createQuizAttempt(attemptData: Omit<InsertQuizAttempt, 'id'>): Promise<QuizAttempt> {
+    const id = nanoid();
     const [attempt] = await db.insert(quizAttempts).values({
-      id: nanoid(),
-      ...attemptData
+      ...attemptData,
+      id
     }).returning();
     return attempt;
   }

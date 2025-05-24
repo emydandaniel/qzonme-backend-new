@@ -1,5 +1,5 @@
 import { db } from './db';
-import { quizzes, questions, quizAttempts } from '@shared/schema';
+import { quizzes, questions, quizAttempts } from '../shared/schema';
 import { eq, lt, inArray, sql } from 'drizzle-orm';
 import { cleanupOldQuizImages } from './cloudinary';
 

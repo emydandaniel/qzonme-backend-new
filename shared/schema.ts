@@ -5,8 +5,7 @@ import { z } from 'zod';
 // Database Schema
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  name: text('name').notNull(),
+  username: text('username').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
@@ -46,7 +45,9 @@ export const QuestionSchema = createSelectSchema(questions);
 export const QuizAttemptSchema = createSelectSchema(quizAttempts);
 
 // Insert Schemas
-export const insertUserSchema = createInsertSchema(users);
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true
+});
 export const insertQuizSchema = createInsertSchema(quizzes);
 export const insertQuestionSchema = createInsertSchema(questions);
 export const insertQuizAttemptSchema = createInsertSchema(quizAttempts);
@@ -58,7 +59,7 @@ export const questionAnswerSchema = z.object({
 });
 
 // Types
-export type User = z.infer<typeof UserSchema>;
+export type User = z.infer<typeof insertUserSchema>;
 export type Quiz = z.infer<typeof QuizSchema>;
 export type Question = z.infer<typeof QuestionSchema>;
 export type QuizAttempt = z.infer<typeof QuizAttemptSchema>;

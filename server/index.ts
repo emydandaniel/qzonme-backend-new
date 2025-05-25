@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from 'cors';
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 import * as pathModule from "path";
@@ -7,6 +8,13 @@ import { scheduleCleanupTask } from './cleanup.js';
 import { testCloudinaryConnection } from './cloudinary.js';
 
 const app = express();
+app.use(cors({
+  origin: [
+    'https://qzonme-frontend-new.vercel.app',
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

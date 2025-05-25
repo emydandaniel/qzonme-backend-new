@@ -17,8 +17,8 @@ export class DatabaseStorage {
         }).returning();
         return user;
     }
-    async getUserByEmail(email) {
-        const [user] = await db.select().from(users).where(eq(users.email, email));
+    async getUserByEmail(username) {
+        const [user] = await db.select().from(users).where(eq(users.username, username));
         return user;
     }
     // Quiz methods

@@ -6,6 +6,8 @@ import * as pathModule from "path";
 import * as fs from "fs";
 import { scheduleCleanupTask } from './cleanup.js';
 import { testCloudinaryConnection } from './cloudinary.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const app = express();
 app.use(cors({
@@ -123,3 +125,10 @@ app.use((req, res, next) => {
     log('Scheduled daily cleanup task for expired quizzes (7-day retention period)');
   });
 })();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Serve static files from the public directory
+app.use(express.static(pathModule.join(__dirname, 'public')));
+app.use('/static', express.static(pathModule.join(__dirname, 'public')));

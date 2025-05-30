@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx server/index.ts",
     "build": "rimraf dist && tsc && npm run copy-files",
-    "copy-files": "powershell -Command \"New-Item -ItemType Directory -Force -Path dist/server/public; Copy-Item -Path server/public/* -Destination dist/server/public -Recurse -Force\"",
+    "copy-files": "mkdir -p dist/server/public && cp -r server/public/* dist/server/public/",
     "start": "node dist/server/index.js",
     "db:push": "drizzle-kit push"
   },

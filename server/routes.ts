@@ -31,39 +31,27 @@ const tempUploadDir = path.join(projectRoot, 'temp_uploads');
 console.log('Project root:', projectRoot);
 console.log('Temp upload directory:', tempUploadDir);
 
-// Ensure temp directory exists
+// Ensure the temp uploads directory exists
 if (!fs.existsSync(tempUploadDir)) {
   fs.mkdirSync(tempUploadDir, { recursive: true });
-  console.log(`Created temp upload directory: ${tempUploadDir}`);
 }
 
-// Use multer with temporary storage
-const storage_config = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, tempUploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Create a unique filename with timestamp and random string
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const filename = file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname);
-    
-    console.log(`New temp upload: ${filename}`);
-    cb(null, filename);
-  }
-});
-
-const upload = multer({ 
-  storage: storage_config,
+// Configure multer for temporary file storage
+const upload = multer({
+  dest: tempUploadDir,
   limits: {
-    fileSize: 10 * 1024 * 1024 // Increased to 10MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   },
-  fileFilter: function (req, file, cb) {
-    // Accept images only
-    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-      // @ts-ignore - Multer types aren't perfect
-      return cb(new Error('Only image files are allowed!'), false);
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    
+    if (mimetype && extname) {
+      return cb(null, true);
     }
-    cb(null, true);
+    cb(new Error('Only image files are allowed!'));
   }
 });
 

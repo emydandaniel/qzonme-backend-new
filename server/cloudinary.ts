@@ -3,11 +3,11 @@ import fs from 'fs';
 import { promisify } from 'util';
 import path from 'path';
 
-// Cloudinary setup
+// Cloudinary setup with environment variables
 cloudinary.config({
-  cloud_name: 'djkecqprm',
-  api_key: '412876169339576',
-  api_secret: 'qAQFpDVPgT2_HDKvZ18sTPOqmYw'
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'djkecqprm',
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // Helper function to create read streams
@@ -32,18 +32,16 @@ export async function uploadToCloudinary(filePath: string, quizId: number) {
     const result = await new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: 'qzonme', // Store in a 'qzonme' folder for organization
-          tags: [`quiz:${quizId}`], // Tag for later retrieval and cleanup
-          resource_type: 'image',
+          folder: 'quiz-images',
+          tags: [`quiz_${quizId}`],
           transformation: [
-            { width: 800, crop: 'limit' }, // Resize to max 800px width
-            { quality: 'auto:good' }, // Automatic quality optimization
-            { fetch_format: 'auto' } // Convert to WebP when browser supports it
+            { width: 800, crop: "limit" },
+            { fetch_format: "auto", quality: "auto" }
           ]
         },
         (error, result) => {
           if (error) {
-            console.error("Cloudinary upload error:", error);
+            console.error('Cloudinary upload error:', error);
             reject(error);
           } else {
             resolve(result);
@@ -52,13 +50,15 @@ export async function uploadToCloudinary(filePath: string, quizId: number) {
       );
       
       // Pipe the file to the upload stream
-      fs.createReadStream(filePath).pipe(uploadStream);
+      createReadStream(filePath).pipe(uploadStream);
     });
     
-    console.log(`Successfully uploaded to Cloudinary: ${result.secure_url}`);
+    // Clean up the temporary file
+    await fs.promises.unlink(filePath);
+    
     return result;
   } catch (error) {
-    console.error("Error in uploadToCloudinary:", error);
+    console.error('Error uploading to Cloudinary:', error);
     throw error;
   }
 }

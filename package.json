@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "rimraf dist && tsc && npm run copy-files",
-    "copy-files": "mkdir -p dist/server/public && cp -r server/public/* dist/server/public/",
+    "build": "rimraf dist && tsc",
     "start": "node dist/server/index.js",
     "db:push": "drizzle-kit push"
   },

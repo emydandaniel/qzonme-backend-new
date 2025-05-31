@@ -5,7 +5,7 @@ import { setupVite, serveStatic, log } from "./vite.js";
 import * as pathModule from "path";
 import * as fs from "fs";
 import { scheduleCleanupTask } from './cleanup.js';
-import { testCloudinaryConnection } from './cloudinary.js';
+import { testCloudinaryConnection } from './cloudinary';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 

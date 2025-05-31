@@ -13,6 +13,8 @@ const app = express();
 app.use(cors({
   origin: [
     'https://qzonme-frontend-new.vercel.app',
+    'https://www.qzonme.com',
+    'https://qzonme.com',
     'http://localhost:3000'
   ],
   credentials: true

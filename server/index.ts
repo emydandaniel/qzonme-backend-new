@@ -69,17 +69,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Special route for sitemap.xml
-app.get('/sitemap.xml', async (req, res) => {
-  try {
-    const sitemapPath = pathModule.join(process.cwd(), 'dist', 'server', 'public', 'sitemap.xml');
-    const data = await fs.readFile(sitemapPath);
-    res.header('Content-Type', 'application/xml');
-    res.send(data);
-  } catch (err) {
-    console.warn('Warning: Could not find sitemap.xml');
-    res.status(404).send('Sitemap not found');
-  }
+// API health check endpoint
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'QzonMe API Server' });
 });
 
 // Initialize server

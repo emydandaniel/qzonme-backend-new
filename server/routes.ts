@@ -280,11 +280,20 @@ router.post("/api/upload-image", upload.single('image'), asyncHandler(async (req
 }));
 
 export function registerRoutes(app: express.Application): Promise<Server> {
-  // Register all routes
-  app.use(router);
+  // Register API routes
+  app.use('/api', router);
   
+  // Catch-all route for non-API requests
+  app.use('*', (req, res) => {
+    if (req.originalUrl.startsWith('/api')) {
+      res.status(404).json({ error: 'API endpoint not found' });
+    } else {
+      res.status(404).json({ error: 'Not found', message: 'This is an API server. Please use the frontend application to access this service.' });
+    }
+  });
+
   // Start server
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 10000;
   return new Promise((resolve) => {
     const server = app.listen(port, () => {
       console.log(`Server running on port ${port}`);

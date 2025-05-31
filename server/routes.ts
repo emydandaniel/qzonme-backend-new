@@ -14,8 +14,7 @@ import {
   insertUserSchema, 
   insertQuizSchema, 
   insertQuestionSchema, 
-  insertQuizAttemptSchema,
-  questionAnswerSchema,
+  insertQuizAttemptSchema,  questionAnswerSchema,
   quizzes,
   quizAttempts,
   questions
@@ -64,7 +63,11 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // User routes  app.post("/api/users", async (req, res) => {
+  // Configure multer for file uploads
+  const upload = multer({ dest: tempUploadDir });
+
+  // User routes
+  app.post("/api/users", async (req: Request, res: Response) => {
     try {
       console.log('Attempting to create user with data:', req.body);
       const userData = insertUserSchema.parse(req.body);
@@ -83,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quiz routes
-  app.post("/api/quizzes", async (req, res) => {
+  app.post("/api/quizzes", async (req: Request, res: Response) => {
     try {
       const quizData = insertQuizSchema.parse(req.body);
       const quiz = await storage.createQuiz(quizData);
@@ -92,13 +95,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid quiz data", error: (error as z.ZodError).message });
       } else {
-        res.status(500).json({ message: "Failed to create quiz" });
+        res.status(500).json({ message: "Failed to create quiz", error: error instanceof Error ? error.message : String(error) });
       }
     }
   });
   
   // Get all quizzes (for testing)
-  app.get("/api/quizzes", async (req, res) => {
+  app.get("/api/quizzes", async (req: Request, res: Response) => {
     try {
       // Get all quizzes from the database
       const allQuizzes = await db.select().from(quizzes);
@@ -109,7 +112,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/quizzes/code/:accessCode", async (req, res) => {
+  // Get quiz by access code
+  app.get("/api/quizzes/code/:accessCode", async (req: Request, res: Response) => {
     try {
       const accessCode = req.params.accessCode;
       const quiz = await storage.getQuizByAccessCode(accessCode);
@@ -134,7 +138,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/quizzes/slug/:urlSlug", async (req, res) => {
+  // Get quiz by slug
+  app.get("/api/quizzes/slug/:urlSlug", async (req: Request, res: Response) => {
     try {
       const urlSlug = req.params.urlSlug;
       console.log(`Looking up quiz with URL slug: "${urlSlug}"`);
@@ -178,8 +183,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get quiz by dashboard token
-  app.get("/api/quizzes/dashboard/:token", async (req, res) => {
+  // Get quiz by token
+  app.get("/api/quizzes/dashboard/:token", async (req: Request, res: Response) => {
     try {
       const dashboardToken = req.params.token;
       console.log(`Looking up quiz with dashboard token: "${dashboardToken}"`);
@@ -210,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get quiz by ID
-  app.get("/api/quizzes/:quizId", async (req, res) => {
+  app.get("/api/quizzes/:quizId", async (req: Request, res: Response) => {
     try {
       const quizId = req.params.quizId;
       const quiz = await storage.getQuiz(quizId);
@@ -236,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Question routes
-  app.post("/api/questions", async (req, res) => {
+  app.post("/api/questions", async (req: Request, res: Response) => {
     try {
       const questionData = insertQuestionSchema.parse(req.body);
       const question = await storage.createQuestion(questionData);
@@ -250,7 +255,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/quizzes/:quizId/questions", async (req, res) => {
+  // Get questions for quiz
+  app.get("/api/quizzes/:quizId/questions", async (req: Request, res: Response) => {
     try {
       const quizId = req.params.quizId;
       const questions = await storage.getQuestions(quizId);
@@ -261,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quiz attempt routes
-  app.post("/api/quiz-attempts", async (req, res) => {
+  app.post("/api/quiz-attempts", async (req: Request, res: Response) => {
     try {
       const attemptData = insertQuizAttemptSchema.parse(req.body);
       const attempt = await storage.createQuizAttempt(attemptData);
@@ -275,7 +281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/quizzes/:quizId/attempts", async (req, res) => {
+  // Get attempts for quiz
+  app.get("/api/quizzes/:quizId/attempts", async (req: Request, res: Response) => {
     try {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -307,8 +314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get specific quiz attempt by ID
-  app.get("/api/quiz-attempts/:attemptId", async (req, res) => {
+  // Get specific attempt
+  app.get("/api/quiz-attempts/:attemptId", async (req: Request, res: Response) => {
     try {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -346,8 +353,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Verify an answer
-  app.post("/api/questions/:questionId/verify", async (req, res) => {
+  // Verify question
+  app.post("/api/questions/:questionId/verify", async (req: Request, res: Response) => {
     try {
       const questionId = req.params.questionId;
       
@@ -397,8 +404,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Image upload endpoint using Cloudinary
-  app.post("/api/upload-image", upload.single('image'), async (req, res) => {    try {
+  // Image upload
+  app.post("/api/upload-image", upload.single('image'), async (req: Request, res: Response) => {    try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
@@ -445,9 +452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Add a backward compatibility route for any old image URLs
-  // This will redirect to a "no image" placeholder to avoid breaking existing content
-  app.use('/uploads', (req, res) => {
+  // Serve uploaded files
+  app.use('/uploads', (req: Request, res: Response) => {
     console.log(`Legacy image request received for: ${req.path}`);
     // Return 404 with a JSON message explaining the change
     res.status(404).json({
@@ -456,10 +462,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  // Register contact form routes
+  // Register contact routes
   registerContactRoutes(app);
 
-  app.post("/api/quizzes/:quizId/submit", async (req, res) => {
+  // Submit quiz
+  app.post("/api/quizzes/:quizId/submit", async (req: Request, res: Response) => {
     try {
       const quizId = req.params.quizId;
       const answers = z.array(questionAnswerSchema).parse(req.body);

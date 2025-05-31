@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { db } from "./db.js";
 import { v2 as cloudinary } from 'cloudinary';
+import { uploadToCloudinary } from './cloudinary.js';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -395,11 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Image upload endpoint using Cloudinary
-  app.post("/api/upload-image", upload.single('image'), async (req, res) => {
-    try {
-      // Import here to avoid circular dependencies
-      const { uploadToCloudinary } = await import('./cloudinary');
-      
+  app.post("/api/upload-image", upload.single('image'), async (req, res) => {    try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }

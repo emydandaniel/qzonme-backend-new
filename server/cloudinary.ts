@@ -15,6 +15,9 @@ function createReadStream(filePath: string) {
   return fs.createReadStream(filePath);
 }
 
+// Export cloudinary instance for other modules
+export { cloudinary };
+
 /**
  * Uploads an image file to Cloudinary with optimization
  * @param filePath Path to the local image file

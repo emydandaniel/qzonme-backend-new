@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { db } from "./db.js";
+import { v2 as cloudinary } from 'cloudinary';
 import { 
   insertUserSchema, 
   insertQuizSchema, 

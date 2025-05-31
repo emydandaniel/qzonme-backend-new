@@ -64,17 +64,20 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // User routes
-  app.post("/api/users", async (req, res) => {
+  // User routes  app.post("/api/users", async (req, res) => {
     try {
+      console.log('Attempting to create user with data:', req.body);
       const userData = insertUserSchema.parse(req.body);
+      console.log('Data validation passed, creating user...');
       const user = await storage.createUser(userData);
+      console.log('User created successfully:', user);
       res.status(201).json(user);
     } catch (error) {
+      console.error('Error creating user:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid user data", error: (error as z.ZodError).message });
       } else {
-        res.status(500).json({ message: "Failed to create user" });
+        res.status(500).json({ message: "Failed to create user", error: error instanceof Error ? error.message : String(error) });
       }
     }
   });

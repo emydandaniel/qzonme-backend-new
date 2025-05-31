@@ -1,7 +1,7 @@
 import express, { Request, Response, Router } from 'express';
 import multer from 'multer';
 import { join } from 'path';
-import { quizzes, questions, quizAttempts, type Quiz, type Question } from '../shared/schema.js';
+import { quizzes, questions, quizAttempts, users, type Quiz, type Question, insertUserSchema } from '../shared/schema.js';
 import { eq, and, or, desc } from 'drizzle-orm';
 import { db } from './db.js';
 import { uploadToCloudinary } from './cloudinary.js';
@@ -277,6 +277,35 @@ router.post("/api/upload-image", upload.single('image'), asyncHandler(async (req
     await safeDelete(req.file.path);
     throw error;
   }
+}));
+
+// User routes
+router.post("/api/users", asyncHandler(async (req: Request, res: Response) => {
+  const userData = insertUserSchema.parse(req.body);
+  
+  // Check for existing user
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.username, userData.username))
+    .limit(1);
+
+  if (existingUser.length > 0) {
+    const [user] = existingUser;
+    return res.json({ success: true, user });
+  }
+
+  // Create new user
+  const [newUser] = await db.insert(users)
+    .values({
+      id: crypto.randomUUID(),
+      username: userData.username,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    .returning();
+
+  res.status(201).json({ success: true, user: newUser });
 }));
 
 export function registerRoutes(app: express.Application): Promise<Server> {

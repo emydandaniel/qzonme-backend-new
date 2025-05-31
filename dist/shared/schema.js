@@ -15,6 +15,7 @@ export const quizzes = pgTable('quizzes', {
     accessCode: text('access_code'),
     urlSlug: text('url_slug'),
     dashboardToken: text('dashboard_token'),
+    expiresAt: timestamp('expires_at').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
@@ -23,9 +24,10 @@ export const questions = pgTable('questions', {
     quizId: text('quiz_id').notNull().references(() => quizzes.id),
     question: text('question').notNull(),
     options: json('options').$type().notNull(),
-    correctAnswer: integer('correct_answer').notNull(),
+    correctAnswer: json('correct_answer').$type().notNull(),
     explanation: text('explanation'),
-    order: integer('order').notNull()
+    order: integer('order').notNull(),
+    imageUrl: text('image_url')
 });
 export const quizAttempts = pgTable('quiz_attempts', {
     id: text('id').primaryKey(),
@@ -48,5 +50,6 @@ export const insertQuizAttemptSchema = createInsertSchema(quizAttempts);
 // Additional Schemas
 export const questionAnswerSchema = z.object({
     questionId: z.string(),
-    answer: z.number()
+    userAnswer: z.union([z.string(), z.array(z.string())]),
+    isCorrect: z.boolean()
 });

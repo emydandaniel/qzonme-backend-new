@@ -3,50 +3,53 @@ import cors from 'cors';
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 import * as pathModule from "path";
-import * as fs from "fs";
+import { promises as fs } from "fs";
 import { scheduleCleanupTask } from './cleanup.js';
 import { testCloudinaryConnection } from './cloudinary.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+// Initialize express app
 const app = express();
+
+// Configure CORS
+const allowedOrigins = [
+  'https://qzonme-frontend-new.vercel.app',
+  'https://www.qzonme.com',
+  'https://qzonme.com',
+  'http://localhost:3000',
+  'http://localhost:5173' // Vite dev server
+];
+
 app.use(cors({
-  origin: [
-    'https://qzonme-frontend-new.vercel.app',
-    'https://www.qzonme.com',
-    'https://qzonme.com',
-    'http://localhost:3000'
-  ],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
+
+// Parse JSON and URL encoded bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Special route for sitemap.xml - ensure it's served with XML content type
-app.get('/sitemap.xml', (req, res) => {
-  const sitemapPath = pathModule.join(process.cwd(), 'dist', 'server', 'public', 'sitemap.xml');
-  fs.readFile(sitemapPath, (err, data) => {
-    if (err) {
-      console.warn('Warning: Could not find sitemap.xml');
-      res.status(404).send('Sitemap not found');
-      return;
-    }
-    res.header('Content-Type', 'application/xml');
-    res.send(data);
-  });
-});
-
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const reqPath = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
+  // Capture JSON responses for logging
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
+  // Log after response is sent
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (reqPath.startsWith("/api")) {
@@ -66,66 +69,63 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-    
-    // History API fallback - serve index.html for any route that doesn't match an API or static resource
-    // This is necessary for client-side routing to work with direct URL access
-    app.get('*', (req, res) => {
-      // Skip API routes
-      if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/assets')) {
-        return;
-      }
-      
-      // For all other routes, serve the index.html file
-      const distPath = pathModule.resolve(process.cwd(), 'dist', 'server', 'public');
-      res.sendFile(pathModule.resolve(distPath, "index.html"));
-    });
+// Special route for sitemap.xml
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const sitemapPath = pathModule.join(process.cwd(), 'dist', 'server', 'public', 'sitemap.xml');
+    const data = await fs.readFile(sitemapPath);
+    res.header('Content-Type', 'application/xml');
+    res.send(data);
+  } catch (err) {
+    console.warn('Warning: Could not find sitemap.xml');
+    res.status(404).send('Sitemap not found');
   }
+});
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, async () => {
-    log(`serving on port ${port}`);
-    
+// Initialize server
+(async () => {
+  try {
     // Test Cloudinary connection
-    try {
-      const cloudinaryTestResult = await testCloudinaryConnection();
-      if (cloudinaryTestResult.success) {
-        log('Cloudinary connection successful');
-      } else {
-        log('Warning: Could not connect to Cloudinary - image uploads may fail');
-      }
-    } catch (error) {
-      log(`Error testing Cloudinary connection: ${error instanceof Error ? error.message : String(error)}`);
+    const cloudinaryConnected = await testCloudinaryConnection();
+    if (!cloudinaryConnected) {
+      console.error('Failed to connect to Cloudinary');
+      process.exit(1);
     }
-    
-    // Schedule daily cleanup task to run 5 minutes after server start
-    scheduleCleanupTask(5 * 60 * 1000);
-    log('Scheduled daily cleanup task for expired quizzes (7-day retention period)');
-  });
+
+    // Schedule cleanup task
+    scheduleCleanupTask();
+
+    // Register routes
+    const server = await registerRoutes(app);
+
+    // Error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error('Server error:', err);
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+    });
+
+    // Setup Vite or serve static files
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+      
+      // History API fallback for client-side routing
+      app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/assets')) {
+          return next();
+        }
+        
+        const distPath = pathModule.resolve(process.cwd(), 'dist', 'server', 'public');
+        res.sendFile(pathModule.resolve(distPath, "index.html"));
+      });
+    }
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 })();
 
 const __filename = fileURLToPath(import.meta.url);

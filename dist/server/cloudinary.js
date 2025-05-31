@@ -1,36 +1,61 @@
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
-import path from 'path';
-// Cloudinary setup with environment variables
+// Configure Cloudinary
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'djkecqprm',
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
 });
-// Helper function to create read streams
-function createReadStream(filePath) {
-    return fs.createReadStream(filePath);
+// Default upload options
+export const defaultUploadOptions = {
+    folder: 'quiz-images',
+    transformation: [
+        { width: 1200, height: 1200, crop: 'limit' },
+        { quality: 'auto', fetch_format: 'auto' }
+    ],
+    resource_type: 'auto'
+};
+// Test Cloudinary connection
+export async function testCloudinaryConnection() {
+    try {
+        await cloudinary.api.ping();
+        return true;
+    }
+    catch (error) {
+        console.error('Cloudinary connection test failed:', error);
+        return false;
+    }
 }
-/**
- * Uploads an image file to Cloudinary with optimization
- * @param filePath Path to the local image file
- * @param quizId ID of the quiz for tagging
- * @returns Cloudinary upload result with secure_url
- */
+// Upload an image file to Cloudinary
 export async function uploadToCloudinary(filePath, quizId) {
     try {
         console.log(`Uploading file to Cloudinary: ${filePath} for quiz ${quizId}`);
-        // Get file extension to help identify file type
-        const fileExt = path.extname(filePath).toLowerCase();
-        // Upload to Cloudinary with optimization (resize to 800px width and convert to WebP)
+        // Upload to Cloudinary with optimization
         const result = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream({
-                folder: 'quiz-images',
+                ...defaultUploadOptions,
                 tags: [`quiz_${quizId}`],
                 transformation: [
-                    { width: 800, crop: "limit" },
-                    { fetch_format: "auto", quality: "auto" }
-                ]
+                    { width: 1200, crop: "limit" },
+                    { quality: "auto", fetch_format: "auto" },
+                    { dpr: "auto" }
+                ],
+                eager: [
+                    { width: 800, fetch_format: "auto", quality: 80 },
+                    { width: 400, fetch_format: "auto", quality: 75 }
+                ],
+                eager_async: false,
+                invalidate: true,
+                overwrite: true,
+                use_asset_folder_as_public_id_prefix: true,
+                responsive_breakpoints: {
+                    create_derived: true,
+                    bytes_step: 20000,
+                    min_width: 200,
+                    max_width: 1200,
+                    transformation: { quality: "auto:good", format: "auto" }
+                }
             }, (error, result) => {
                 if (error) {
                     console.error('Cloudinary upload error:', error);
@@ -40,8 +65,7 @@ export async function uploadToCloudinary(filePath, quizId) {
                     resolve(result);
                 }
             });
-            // Pipe the file to the upload stream
-            createReadStream(filePath).pipe(uploadStream);
+            fs.createReadStream(filePath).pipe(uploadStream);
         });
         // Clean up the temporary file
         await fs.promises.unlink(filePath);
@@ -52,64 +76,4 @@ export async function uploadToCloudinary(filePath, quizId) {
         throw error;
     }
 }
-/**
- * Deletes all images from Cloudinary that match the given tag
- * @param quizId The quiz ID for tag matching
- * @returns Promise resolving to the deletion result
- */
-export async function deleteImagesByQuizId(quizId) {
-    try {
-        console.log(`Deleting images for quiz ${quizId} from Cloudinary`);
-        const result = await cloudinary.api.delete_resources_by_tag(`quiz:${quizId}`);
-        console.log(`Successfully deleted images for quiz ${quizId}:`, result);
-        return result;
-    }
-    catch (error) {
-        console.error(`Error deleting images for quiz ${quizId}:`, error);
-        throw error;
-    }
-}
-/**
- * Cleanup function to delete all images for expired quizzes
- * @param oldQuizIds Array of expired quiz IDs to clean up
- * @returns Promise resolving to the cleanup result
- */
-export async function cleanupOldQuizImages(oldQuizIds) {
-    try {
-        console.log(`Starting cleanup of images for ${oldQuizIds.length} expired quizzes`);
-        const results = [];
-        // Process deletions in batches to avoid rate limits
-        for (const quizId of oldQuizIds) {
-            try {
-                const result = await deleteImagesByQuizId(quizId);
-                results.push({ quizId, success: true, result });
-            }
-            catch (error) {
-                results.push({ quizId, success: false, error });
-            }
-            // Small delay between operations
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        console.log(`Completed cleanup of expired quiz images:`, results);
-        return results;
-    }
-    catch (error) {
-        console.error("Error in cleanupOldQuizImages:", error);
-        throw error;
-    }
-}
-/**
- * Tests the Cloudinary connection
- * @returns Promise resolving to the test result
- */
-export async function testCloudinaryConnection() {
-    try {
-        const result = await cloudinary.api.ping();
-        console.log('Cloudinary connection successful:', result);
-        return { success: true, result };
-    }
-    catch (error) {
-        console.error('Cloudinary connection error:', error);
-        return { success: false, error };
-    }
-}
+export { cloudinary };

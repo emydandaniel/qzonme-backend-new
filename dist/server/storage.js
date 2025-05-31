@@ -54,8 +54,14 @@ export class DatabaseStorage {
     async createQuestion(questionData) {
         const id = nanoid();
         const [question] = await db.insert(questions).values({
-            ...questionData,
-            id
+            id,
+            quizId: questionData.quizId,
+            question: questionData.question,
+            options: questionData.options,
+            correctAnswer: questionData.correctAnswer,
+            explanation: questionData.explanation,
+            order: questionData.order,
+            imageUrl: questionData.imageUrl
         }).returning();
         return question;
     }

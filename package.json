@@ -1,11 +1,9 @@
 {
   "name": "quiz-builder-backend",
   "version": "1.0.0",
-  "type": "module",
-  "scripts": {
+  "type": "module",  "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "rimraf dist && tsc && npm run copy-files",
-    "copy-files": "mkdir -p dist/server/public && cp -r server/public/* dist/server/public/ || true",
+    "build": "rimraf dist && tsc",
     "start": "node dist/server/index.js",
     "db:push": "drizzle-kit push"
   },

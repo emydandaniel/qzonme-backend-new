@@ -91,12 +91,17 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(questions).where(eq(questions.quizId, quizId));
     return result;
   }
-  
-  async createQuestion(questionData: Omit<InsertQuestion, 'id'>): Promise<Question> {
+    async createQuestion(questionData: Omit<InsertQuestion, 'id'>): Promise<Question> {
     const id = nanoid();
     const [question] = await db.insert(questions).values({
-      ...questionData,
-      id
+      id,
+      quizId: questionData.quizId,
+      question: questionData.question,
+      options: questionData.options,
+      correctAnswer: questionData.correctAnswer as string | string[],
+      explanation: questionData.explanation,
+      order: questionData.order,
+      imageUrl: questionData.imageUrl
     }).returning();
     return question;
   }

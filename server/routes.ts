@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { db } from "./db.js";
 import { v2 as cloudinary } from 'cloudinary';
+import { uploadImage } from './cloudinary.js';
 import { uploadToCloudinary } from './cloudinary.js';
 
 // Configure Cloudinary
